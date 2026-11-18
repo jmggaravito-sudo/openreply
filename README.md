@@ -146,3 +146,5 @@ MIT. See [LICENSE](LICENSE).
 <!-- deploy trigger nov17: vars configured -->
 
 <!-- redeploy nov18: full env configured -->
+
+<!-- redeploy nov18: AUTH_SECRET added -->
