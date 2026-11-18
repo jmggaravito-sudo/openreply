@@ -147,4 +147,7 @@ MIT. See [LICENSE](LICENSE).
 
 <!-- redeploy nov18: full env configured -->
 
+<!-- redeploy nov18b: AUTH_DEBUG on -->
 <!-- redeploy nov18: AUTH_SECRET added -->
+
+<!-- redeploy nov18b: AUTH_DEBUG on -->
