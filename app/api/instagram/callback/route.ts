@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       (p) => p.instagram_business_account
     );
     let userInfo;
-    if (linkedPage) {
+    if (linkedPage?.access_token && linkedPage.instagram_business_account) {
       const ig = linkedPage.instagram_business_account;
       longLivedToken = linkedPage.access_token;
       expiresIn = 0;
