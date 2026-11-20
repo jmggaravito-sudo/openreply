@@ -13,6 +13,10 @@ import { getEncryptionKeyHex, requireEnv } from "@/lib/env";
 // link rather than a wrong endpoint. The token exchange below still lives on
 // api.instagram.com — only the authorize hop moved.
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
+// Newer Meta apps use Unified login: the authorize hop runs on the Facebook
+// dialog with a config_id, not on instagram.com (which rejects them with
+// "Invalid platform app"). The token exchange below stays on api.instagram.com.
+const FACEBOOK_DIALOG_OAUTH_URL = "https://www.facebook.com/dialog/oauth";
 const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
@@ -90,14 +94,17 @@ export function verifyOAuthState(state: string | null): OAuthStatePayload | null
 export function getAuthorizationUrl(redirectUri: string, state: string): string {
   const params = new URLSearchParams({
     client_id: requireEnv("INSTAGRAM_APP_ID"),
+    config_id: requireEnv("INSTAGRAM_CONFIG_ID"),
     redirect_uri: redirectUri,
     scope:
       "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights",
     response_type: "code",
     state,
+    display: "popup",
+    override_default_response_type: "true",
   });
 
-  return `${INSTAGRAM_OAUTH_URL}?${params.toString()}`;
+  return `${FACEBOOK_DIALOG_OAUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeCodeForToken(

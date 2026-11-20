@@ -31,6 +31,7 @@ export function getEncryptionKeyHex(): string {
 // variable names back instead of an unhandled throw from requireEnv().
 const INSTAGRAM_OAUTH_ENV = [
   "INSTAGRAM_APP_ID",
+  "INSTAGRAM_CONFIG_ID",
   "INSTAGRAM_APP_SECRET",
   "ENCRYPTION_KEY",
   "NEXTAUTH_SECRET",
