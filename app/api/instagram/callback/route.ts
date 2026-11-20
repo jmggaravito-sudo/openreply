@@ -3,11 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { getBaseUrl } from "@/lib/env";
 import { canConnectInstagramAccount } from "@/lib/instagram-accounts";
-import {
-  getInstagramAccountFromFacebookToken,
-  getLongLivedTokenUnified,
-  subscribeInstagramAccountToWebhooksUnified,
-} from "@/lib/meta/client";
+import { getLongLivedToken, getUserInfo, subscribeInstagramAccountToWebhooks } from "@/lib/meta/client";
 import {
   encryptToken,
   exchangeCodeForTokenUnified,
@@ -52,8 +48,8 @@ export async function GET(request: NextRequest) {
       redirectUri
     );
     const { accessToken: longLivedToken, expiresIn } =
-      await getLongLivedTokenUnified(shortLivedToken);
-    const userInfo = await getInstagramAccountFromFacebookToken(longLivedToken);
+      await getLongLivedToken(shortLivedToken);
+    const userInfo = await getUserInfo(longLivedToken);
     // Webhooks and the messaging API key off the professional account ID
     // (user_id), not the app-scoped `id`. Store user_id so comment webhooks
     // can be matched back to this account. Fall back to id if user_id is
@@ -75,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     let webhookSubscribed = false;
     try {
-      const subscription = await subscribeInstagramAccountToWebhooksUnified(
+      const subscription = await subscribeInstagramAccountToWebhooks(
         instagramId,
         longLivedToken
       );

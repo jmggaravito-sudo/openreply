@@ -827,71 +827,7 @@ export async function getFollowerCountSeries(
   }
 }
 
-// Unified login issues a short-lived Facebook User token. This swaps it for
-// the 60-day long-lived Facebook token that Instagram API calls accept.
-export async function getLongLivedTokenUnified(
-  shortLivedToken: string
-): Promise<{ accessToken: string; expiresIn: number }> {
-  const url = new URL(`${facebookGraphBase()}/oauth/access_token`);
-  url.searchParams.set("grant_type", "fb_exchange_token");
-  url.searchParams.set("client_id", requireEnv("INSTAGRAM_APP_ID"));
-  url.searchParams.set("client_secret", requireEnv("INSTAGRAM_APP_SECRET"));
-  url.searchParams.set("fb_exchange_token", shortLivedToken);
 
-  const response = await fetch(url.toString());
-  const data = await handleResponse<{ access_token: string; expires_in?: number }>(response);
-
-  return {
-    accessToken: data.access_token,
-    expiresIn: data.expires_in ?? 5184000,
-  };
-}
-
-// With Unified login the selected Instagram account is resolved from the
-// Facebook user's pages: the page carrying the instagram_business_account the
-// user picked in the dialog is the account to connect.
-export async function getInstagramAccountFromFacebookToken(
-  accessToken: string
-): Promise<InstagramUser> {
-  const url = new URL(`${facebookGraphBase()}/me/accounts`);
-  url.searchParams.set("fields", "instagram_business_account{id,username,name,followers_count}");
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const data = await handleResponse<{
-    data: { instagram_business_account?: { id: string; username: string; name?: string; followers_count?: number } }[];
-  }>(response);
-
-  const page = data.data?.find((p) => p.instagram_business_account);
-  if (!page?.instagram_business_account) {
-    throw new Error("No Instagram account linked to any of your Facebook pages");
-  }
-  const ig = page.instagram_business_account;
-  return {
-    id: ig.id,
-    username: ig.username,
-    name: ig.name,
-    followers_count: ig.followers_count,
-  };
-}
-
-export async function subscribeInstagramAccountToWebhooksUnified(
-  instagramAccountId: string,
-  accessToken: string
-): Promise<{ success: boolean }> {
-  const response = await fetch(
-    `${facebookGraphBase()}/${instagramAccountId}/subscribed_apps`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ subscribed_fields: "comments,messages" }),
-    }
-  );
-  const data = await handleResponse<{ success?: boolean }>(response);
-  return { success: data.success !== false };
 }
 
 export async function getLongLivedToken(
@@ -932,7 +868,7 @@ export async function subscribeInstagramAccountToWebhooks(
   accessToken: string
 ): Promise<{ success: boolean }> {
   const response = await fetch(
-    `${facebookGraphBase()}/${instagramAccountId}/subscribed_apps`,
+    `${instagramGraphBase()}/${instagramAccountId}/subscribed_apps`,
     {
       method: "POST",
       headers: {
