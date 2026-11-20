@@ -1,7 +1,10 @@
 import { getMetaGraphApiVersion, requireEnv } from "@/lib/env";
 
+// Unified login issues a Facebook User token, so every Instagram API call
+// goes through the Facebook graph (same endpoint shapes, keyed by the IG
+// professional account id).
 function instagramGraphBase() {
-  return `https://graph.instagram.com/${getMetaGraphApiVersion()}`;
+  return `https://graph.facebook.com/${getMetaGraphApiVersion()}`;
 }
 
 function facebookGraphBase() {
@@ -665,15 +668,20 @@ export async function getConversationMessages(
 }
 
 export async function getUserInfo(accessToken: string): Promise<InstagramUser> {
-  const url = new URL(`${instagramGraphBase()}/me`);
+  // The dialog-selected Instagram account id is provisioned via env (Unified
+  // tokens cannot enumerate pages without pages_show_list).
+  const igId = requireEnv("INSTAGRAM_ACCOUNT_ID");
+  const url = new URL(`${instagramGraphBase()}/${igId}`);
   url.searchParams.set(
     "fields",
-    "id,user_id,username,name,profile_picture_url,followers_count"
+    "id,username,name,profile_picture_url,followers_count"
   );
   url.searchParams.set("access_token", accessToken);
 
   const response = await fetch(url.toString());
-  return handleResponse<InstagramUser>(response);
+  const info = await handleResponse<InstagramUser>(response);
+  // Webhooks and messaging key off this id; keep it authoritative.
+  return { ...info, id: igId, user_id: igId };
 }
 
 const MEDIA_FIELDS =
@@ -830,10 +838,11 @@ export async function getFollowerCountSeries(
 export async function getLongLivedToken(
   shortLivedToken: string
 ): Promise<{ accessToken: string; expiresIn: number }> {
-  const url = new URL(`${instagramGraphBase()}/access_token`);
-  url.searchParams.set("grant_type", "ig_exchange_token");
+  const url = new URL(`${facebookGraphBase()}/oauth/access_token`);
+  url.searchParams.set("grant_type", "fb_exchange_token");
+  url.searchParams.set("client_id", requireEnv("INSTAGRAM_APP_ID"));
   url.searchParams.set("client_secret", requireEnv("INSTAGRAM_APP_SECRET"));
-  url.searchParams.set("access_token", shortLivedToken);
+  url.searchParams.set("fb_exchange_token", shortLivedToken);
 
   const response = await fetch(url.toString());
   const data = await handleResponse<TokenResponse>(response);
@@ -847,9 +856,11 @@ export async function getLongLivedToken(
 export async function refreshLongLivedToken(
   longLivedToken: string
 ): Promise<{ accessToken: string; expiresIn: number }> {
-  const url = new URL(`${instagramGraphBase()}/refresh_access_token`);
-  url.searchParams.set("grant_type", "ig_refresh_token");
-  url.searchParams.set("access_token", longLivedToken);
+  const url = new URL(`${facebookGraphBase()}/oauth/access_token`);
+  url.searchParams.set("grant_type", "fb_exchange_token");
+  url.searchParams.set("client_id", requireEnv("INSTAGRAM_APP_ID"));
+  url.searchParams.set("client_secret", requireEnv("INSTAGRAM_APP_SECRET"));
+  url.searchParams.set("fb_exchange_token", longLivedToken);
 
   const response = await fetch(url.toString());
   const data = await handleResponse<TokenResponse>(response);
