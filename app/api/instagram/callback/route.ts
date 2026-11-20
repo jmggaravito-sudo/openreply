@@ -47,9 +47,34 @@ export async function GET(request: NextRequest) {
       code,
       redirectUri
     );
-    const { accessToken: longLivedToken, expiresIn } =
+    let { accessToken: longLivedToken, expiresIn } =
       await getLongLivedToken(shortLivedToken);
-    const userInfo = await getUserInfo(longLivedToken);
+    // Unified login issues a Facebook User token. The connected Instagram
+    // account is reached through its linked Facebook Page: find the page with
+    // an instagram_business_account and use that PAGE token (it never expires
+    // while the app stays installed) for every Instagram API call.
+    let userInfo = await getUserInfo(longLivedToken).catch(async () => {
+      const res = await fetch(
+        `https://graph.facebook.com/v25.0/me/accounts?fields=access_token,instagram_business_account{id,username,name,followers_count}`,
+        { headers: { Authorization: `Bearer ${longLivedToken}` } }
+      );
+      const data = await res.json();
+      const page = (data.data || []).find((p) => p.instagram_business_account);
+      if (!page) throw new Error("No Instagram account linked to any of your Facebook pages");
+      const ig = page.instagram_business_account;
+      return {
+        id: ig.id,
+        user_id: ig.id,
+        username: ig.username,
+        name: ig.name,
+        followers_count: ig.followers_count,
+        __pageToken: page.access_token,
+      };
+    });
+    if (userInfo.__pageToken) {
+      longLivedToken = userInfo.__pageToken;
+      expiresIn = 0;
+    }
     // Webhooks and the messaging API key off the professional account ID
     // (user_id), not the app-scoped `id`. Store user_id so comment webhooks
     // can be matched back to this account. Fall back to id if user_id is
