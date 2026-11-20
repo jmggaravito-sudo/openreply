@@ -96,8 +96,9 @@ export function getAuthorizationUrl(redirectUri: string, state: string): string 
     client_id: requireEnv("INSTAGRAM_APP_ID"),
     config_id: requireEnv("INSTAGRAM_CONFIG_ID"),
     redirect_uri: redirectUri,
-    scope:
-      "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights",
+    // scope omitted: the Unified login dialog applies the permissions already
+    // configured on the use case, and requesting unapproved scopes here makes
+    // Meta reject the whole dialog with "Invalid Scopes".
     response_type: "code",
     state,
     display: "popup",
