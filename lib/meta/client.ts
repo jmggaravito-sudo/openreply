@@ -827,9 +827,6 @@ export async function getFollowerCountSeries(
   }
 }
 
-
-}
-
 export async function getLongLivedToken(
   shortLivedToken: string
 ): Promise<{ accessToken: string; expiresIn: number }> {
