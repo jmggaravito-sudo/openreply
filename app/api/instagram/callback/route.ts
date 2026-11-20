@@ -57,7 +57,17 @@ export async function GET(request: NextRequest) {
       `https://graph.facebook.com/v25.0/me/accounts?fields=access_token,instagram_business_account{id,username,name,followers_count}`,
       { headers: { Authorization: `Bearer ${longLivedToken}` } }
     );
-    const pagesData = await pagesRes.json();
+    const pagesData: {
+      data?: {
+        access_token?: string;
+        instagram_business_account?: {
+          id: string;
+          username: string;
+          name?: string;
+          followers_count?: number;
+        };
+      }[];
+    } = await pagesRes.json();
     const linkedPage = (pagesData.data || []).find(
       (p) => p.instagram_business_account
     );
