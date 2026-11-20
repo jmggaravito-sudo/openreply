@@ -108,6 +108,42 @@ export function getAuthorizationUrl(redirectUri: string, state: string): string 
   return `${FACEBOOK_DIALOG_OAUTH_URL}?${params.toString()}`;
 }
 
+// Unified login apps authorize through the Facebook dialog (config_id), so the
+// code must be exchanged on the Facebook graph — api.instagram.com rejects it
+// with "Invalid platform app". The resulting token is a Facebook User access
+// token carrying the use-case permissions; Instagram API endpoints accept it.
+export async function exchangeCodeForTokenUnified(
+  code: string,
+  redirectUri: string
+): Promise<{ accessToken: string }> {
+  const body = new URLSearchParams({
+    client_id: requireEnv("INSTAGRAM_APP_ID"),
+    client_secret: requireEnv("INSTAGRAM_APP_SECRET"),
+    grant_type: "authorization_code",
+    redirect_uri: redirectUri,
+    code,
+  });
+
+  const response = await fetch("https://graph.facebook.com/v23.0/oauth/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      `Token exchange failed: ${error.error?.message || JSON.stringify(error)}`
+    );
+  }
+
+  const data = await response.json();
+  if (!data.access_token) {
+    throw new Error("Token exchange failed: no access_token in response");
+  }
+  return { accessToken: data.access_token };
+}
+
 export async function exchangeCodeForToken(
   code: string,
   redirectUri: string
