@@ -53,27 +53,28 @@ export async function GET(request: NextRequest) {
     // account is reached through its linked Facebook Page: find the page with
     // an instagram_business_account and use that PAGE token (it never expires
     // while the app stays installed) for every Instagram API call.
-    let userInfo = await getUserInfo(longLivedToken).catch(async () => {
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/me/accounts?fields=access_token,instagram_business_account{id,username,name,followers_count}`,
-        { headers: { Authorization: `Bearer ${longLivedToken}` } }
-      );
-      const data = await res.json();
-      const page = (data.data || []).find((p) => p.instagram_business_account);
-      if (!page) throw new Error("No Instagram account linked to any of your Facebook pages");
-      const ig = page.instagram_business_account;
-      return {
+    const pagesRes = await fetch(
+      `https://graph.facebook.com/v25.0/me/accounts?fields=access_token,instagram_business_account{id,username,name,followers_count}`,
+      { headers: { Authorization: `Bearer ${longLivedToken}` } }
+    );
+    const pagesData = await pagesRes.json();
+    const linkedPage = (pagesData.data || []).find(
+      (p) => p.instagram_business_account
+    );
+    let userInfo;
+    if (linkedPage) {
+      const ig = linkedPage.instagram_business_account;
+      longLivedToken = linkedPage.access_token;
+      expiresIn = 0;
+      userInfo = {
         id: ig.id,
         user_id: ig.id,
         username: ig.username,
         name: ig.name,
         followers_count: ig.followers_count,
-        __pageToken: page.access_token,
       };
-    });
-    if (userInfo.__pageToken) {
-      longLivedToken = userInfo.__pageToken;
-      expiresIn = 0;
+    } else {
+      userInfo = await getUserInfo(longLivedToken);
     }
     // Webhooks and the messaging API key off the professional account ID
     // (user_id), not the app-scoped `id`. Store user_id so comment webhooks
